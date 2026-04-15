@@ -121,12 +121,19 @@ class UserController extends Controller
 
     public function unlock(Request $request, $id)
     {
-        // Hanya Super Admin yang bisa unlock (bisa dicek lewat middleware/policy, ini penjagaan tambahan)
-        if ($request->user()->role !== 'Super Admin') {
-            return response()->json(['message' => 'Unauthorized. Hanya Super Admin yang dapat membuka kunci akun.'], 403);
+        $user = User::findOrFail($id);
+        $currentUser = $request->user();
+
+        $canUnlock = false;
+        if ($currentUser->role === 'Super Admin' && $user->role === 'Admin') {
+            $canUnlock = true;
+        } elseif ($currentUser->role === 'Admin' && in_array($user->role, ['User', 'Manajemen'])) {
+            $canUnlock = true;
         }
 
-        $user = User::findOrFail($id);
+        if (!$canUnlock) {
+            return response()->json(['message' => 'Unauthorized. Anda tidak memiliki hak untuk membuka kunci akun ini.'], 403);
+        }
         
         if (!$user->is_locked) {
             return response()->json(['message' => 'Akun pengguna ini tidak dalam keadaan terkunci.'], 400);

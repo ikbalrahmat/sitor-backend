@@ -10,7 +10,7 @@ class DiklatPersonel extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'tahun', 'jenis', 
+        'user_id', 'tahun', 'jenis', 'kategori_sertifikat',
         'rencana_diklat', 'rencana_penyelenggara', 'rencana_jadwal',
         'realisasi_diklat', 'realisasi_penyelenggara', 'realisasi_jadwal',
         'sertifikat_path', 'nomor_sertifikat', 'tanggal_sertifikat', 

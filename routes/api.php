@@ -7,8 +7,11 @@ use App\Http\Controllers\DiklatPersonelController;
 use App\Http\Controllers\MatriksRisikoController; // <-- Tambahkan import ini
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\AuditTopicController;
 // Route Terbuka
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [\App\Http\Controllers\PasswordResetController::class, 'reset']);
 // Route Tertutup (Harus bawa Token)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -37,4 +40,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auditors-competencies', [AuditController::class, 'getAuditors']);
     Route::post('/audits/{audit}/teams', [AuditController::class, 'storeTeam']);
     Route::delete('/audits/{audit}/teams/{team}', [AuditController::class, 'destroyTeam']);
+
+    // Rute Topik Penugasan Audit
+    Route::get('/audit-topics', [AuditTopicController::class, 'index']);
+    Route::post('/audit-topics', [AuditTopicController::class, 'store']);
+    Route::put('/audit-topics/{id}', [AuditTopicController::class, 'update']);
+    Route::delete('/audit-topics/{id}', [AuditTopicController::class, 'destroy']);
+    Route::post('/audit-topics/{topicId}/evaluations/{userId}', [AuditTopicController::class, 'updateEvaluation']);
 });

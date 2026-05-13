@@ -49,6 +49,7 @@ class DiklatPersonelController extends Controller
     {
         $diklat = DiklatPersonel::findOrFail($id);
         $data = $request->all();
+        \Log::info('UPDATE DIKLAT PAYLOAD: ', $data);
 
         // Proses Update File (Hapus file lama, upload yang baru)
         if ($request->hasFile('sertifikat_file')) {

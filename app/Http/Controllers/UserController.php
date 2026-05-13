@@ -118,4 +118,41 @@ class UserController extends Controller
 
         return response()->json(['message' => 'User berhasil dihapus']);
     }
+
+    public function unlock(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $currentUser = $request->user();
+
+        $canUnlock = false;
+        if ($currentUser->role === 'Super Admin' && $user->role === 'Admin') {
+            $canUnlock = true;
+        } elseif ($currentUser->role === 'Admin' && in_array($user->role, ['User', 'Manajemen'])) {
+            $canUnlock = true;
+        }
+
+        if (!$canUnlock) {
+            return response()->json(['message' => 'Unauthorized. Anda tidak memiliki hak untuk membuka kunci akun ini.'], 403);
+        }
+        
+        if (!$user->is_locked) {
+            return response()->json(['message' => 'Akun pengguna ini tidak dalam keadaan terkunci.'], 400);
+        }
+
+        $user->update([
+            'is_locked' => false,
+            'failed_login_attempts' => 0
+        ]);
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'email' => $request->user()->email,
+            'event_type' => 'USER_UNLOCKED',
+            'description' => 'Membuka kunci (unlock) akun pengguna dengan email: ' . $user->email,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent()
+        ]);
+
+        return response()->json(['message' => 'Kunci akun berhasil dibuka.', 'user' => $user]);
+    }
 }

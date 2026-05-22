@@ -80,4 +80,21 @@ class DiklatPersonelController extends Controller
         $diklat->delete();
         return response()->json(['message' => 'Data diklat berhasil dihapus']);
     }
+
+    // Unduh file dari storage secara aman
+    public function downloadFile(Request $request)
+    {
+        $path = $request->query('path');
+
+        if (!$path) {
+            return response()->json(['message' => 'Path file tidak ditentukan'], 400);
+        }
+
+        // Cek disk public untuk memastikan file ada
+        if (!Storage::disk('public')->exists($path)) {
+            return response()->json(['message' => 'File tidak ditemukan'], 404);
+        }
+
+        return Storage::disk('public')->download($path);
+    }
 }

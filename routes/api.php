@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
     // <-- ROUTE DIKLAT -->
+    Route::get('/download-file', [DiklatPersonelController::class, 'downloadFile']);
     Route::apiResource('diklat', DiklatPersonelController::class);
     // <-- ROUTE MATRIKS RISIKO -->
     Route::get('/matriks-risiko', [MatriksRisikoController::class, 'index']);
@@ -47,4 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/audit-topics/{id}', [AuditTopicController::class, 'update']);
     Route::delete('/audit-topics/{id}', [AuditTopicController::class, 'destroy']);
     Route::post('/audit-topics/{topicId}/evaluations/{userId}', [AuditTopicController::class, 'updateEvaluation']);
+
+    // Rute Penugasan Audit (Kompatibilitas dengan Frontend)
+    Route::get('/penugasan-kompetensi', [AuditTopicController::class, 'getTopics']);
+    Route::post('/penugasan-kompetensi', [AuditTopicController::class, 'syncTopics']);
 });

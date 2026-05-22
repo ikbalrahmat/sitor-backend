@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\AuditTopic;
 use App\Models\AuditEvaluation;
 use App\Models\ActivityLog;
+use Illuminate\Support\Facades\DB;
 
 class AuditTopicController extends Controller
 {
@@ -111,5 +112,86 @@ class AuditTopicController extends Controller
         );
 
         return response()->json($evaluation);
+    }
+
+    /**
+     * Get all topics in the format expected by frontend (penugasan-kompetensi).
+     */
+    public function getTopics()
+    {
+        $topics = AuditTopic::with('evaluations')->get()->map(function($topic) {
+            return [
+                'id' => $topic->id,
+                'unit_kerja' => $topic->unit_kerja,
+                'nama_penugasan' => $topic->name,
+                'kriteria' => $topic->kriteria,
+                'evaluations' => $topic->evaluations
+            ];
+        });
+        return response()->json($topics);
+    }
+
+    /**
+     * Sync topics for a specific unit_kerja.
+     */
+    public function syncTopics(Request $request)
+    {
+        $request->validate([
+            'unit_kerja' => 'required|string',
+            'penugasan_list' => 'array',
+        ]);
+
+        $unitKerja = $request->unit_kerja;
+        $newList = $request->penugasan_list ?? [];
+
+        DB::beginTransaction();
+        try {
+            // Current topics for this unit_kerja
+            $existingTopics = AuditTopic::where('unit_kerja', $unitKerja)->get();
+            $existingTopicIds = $existingTopics->pluck('id')->toArray();
+
+            $newIds = [];
+
+            foreach ($newList as $item) {
+                if (!empty($item['id']) && is_numeric($item['id']) && in_array($item['id'], $existingTopicIds)) {
+                    // Update
+                    $topic = AuditTopic::find($item['id']);
+                    $topic->update([
+                        'name' => $item['nama_penugasan'] ?? $item['name'],
+                        'kriteria' => $item['kriteria'] ?? null,
+                    ]);
+                    $newIds[] = $topic->id;
+                } else {
+                    // Create
+                    $topic = AuditTopic::create([
+                        'unit_kerja' => $unitKerja,
+                        'name' => $item['nama_penugasan'] ?? $item['name'],
+                        'kriteria' => $item['kriteria'] ?? null,
+                    ]);
+                    $newIds[] = $topic->id;
+                }
+            }
+
+            // Delete those not in newIds
+            $topicsToDelete = AuditTopic::where('unit_kerja', $unitKerja)->whereNotIn('id', $newIds)->get();
+            foreach ($topicsToDelete as $td) {
+                $td->delete();
+            }
+
+            ActivityLog::create([
+                'user_id' => $request->user()->id,
+                'email' => $request->user()->email,
+                'event_type' => 'AUDIT_TOPIC_SYNCED',
+                'description' => "Menyelaraskan topik audit untuk Unit Kerja {$unitKerja}",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+
+            DB::commit();
+            return response()->json(['message' => 'Topics synced successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Gagal menyimpan penugasan', 'details' => $e->getMessage()], 500);
+        }
     }
 }
